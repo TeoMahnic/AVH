@@ -1,4 +1,4 @@
-# Copyright (c) 2021-2023 Arm Limited. All rights reserved.
+# Copyright (c) 2021-2024 Arm Limited. All rights reserved.
 
 # Virtual Streaming Interface instance 4 Python script
 
@@ -24,9 +24,9 @@ logging.info("Verbosity level is set to " + level[verbosity])
 
 
 # Video Server configuration
-server_address = ('127.0.0.1', 6000)
-server_authkey = 'vsi_video'
-
+server_address  = ('127.0.0.1', 6000)
+server_authkey  = 'vsi_video'
+source_filename = None
 
 # IRQ registers
 IRQ_Status = 0
@@ -61,7 +61,7 @@ Data = bytearray()
 #  @return None
 def init():
     logging.info("Python function init() called")
-    vsi_video.init(server_address, server_authkey)
+    vsi_video.init(server_address, server_authkey, source_filename)
 
 
 ## Read interrupt request (the VSI IRQ Status Register)

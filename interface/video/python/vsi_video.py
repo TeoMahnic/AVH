@@ -160,11 +160,15 @@ def cleanup():
 
 
 # Client connection to VSI Video Server
-def init(address, authkey):
-    global FILENAME_VALID
+def init(address, authkey, filename):
+    global Filename
 
     base_dir = path.dirname(__file__)
     server_path = path.join(base_dir, 'vsi_video_server.py')
+
+    if filename != None:
+        Filename = filename
+        logging.debug(f"Filename '{Filename}' was set from Python module")
 
     logging.info("Start video server")
     if path.isfile(server_path):
@@ -281,6 +285,17 @@ def wrDataDMA(data, size):
             STATUS &= ~STATUS_BUF_FULL_Msk
 
 
+## Write MODE register (user register)
+#  @param value value to write (32-bit)
+def wrMODE(value):
+    global MODE, FILENAME_VALID
+
+    MODE = value
+
+    if Video.conn != None:
+        FILENAME_VALID = Video.setFilename(Filename, MODE)
+
+
 ## Write CONTROL register (user register)
 #  @param value value to write (32-bit)
 def wrCONTROL(value):
@@ -334,7 +349,7 @@ def rdSTATUS():
 ## Write FILENAME_LEN register (user register)
 #  @param value value to write (32-bit)
 def wrFILENAME_LEN(value):
-    global STATUS, FILENAME_LEN, FILENAME_VALID, Filename, FilenameIdx
+    global FILENAME_LEN, FILENAME_VALID, Filename, FilenameIdx
 
     logging.info("Set new source name length and reset filename and valid flag")
     FilenameIdx = 0
@@ -435,10 +450,10 @@ def rdRegs(index):
 #  @param value value to write (32-bit)
 #  @return value value written (32-bit)
 def wrRegs(index, value):
-    global MODE, FRAME_WIDTH, FRAME_HEIGHT, COLOR_FORMAT, FRAME_RATE, FRAME_COUNT_MAX
+    global FRAME_WIDTH, FRAME_HEIGHT, COLOR_FORMAT, FRAME_RATE, FRAME_COUNT_MAX
 
     if   index == 0:
-        MODE = value
+        wrMODE(value)
     elif index == 1:
         wrCONTROL(value)
     elif index == 2:
