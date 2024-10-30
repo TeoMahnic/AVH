@@ -174,6 +174,10 @@ class VideoServer:
                     extension = str(self.filename).split('.')[-1].lower()
                     fourcc = cv2.VideoWriter_fourcc(*f'{video_fourcc[extension]}')
 
+                    color = True
+                    if self.color_format == self.GRAYSCALE8:
+                        color = False
+
                     if os.path.isfile(self.filename) and (self.frame_index != 0):
                         tmp_filename = f'{self.filename.rstrip(f".{extension}")}_tmp.{extension}'
                         os.rename(self.filename, tmp_filename)
@@ -182,7 +186,7 @@ class VideoServer:
                         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                         self.resolution = (width, height)
                         self.frame_rate = cap.get(cv2.CAP_PROP_FPS)
-                        self.stream = cv2.VideoWriter(self.filename, fourcc, self.frame_rate, self.resolution)
+                        self.stream = cv2.VideoWriter(self.filename, fourcc, self.frame_rate, self.resolution, color)
 
                         while cap.isOpened():
                             ret, frame = cap.read()
@@ -194,7 +198,7 @@ class VideoServer:
                             del frame
 
                     else:
-                        self.stream = cv2.VideoWriter(self.filename, fourcc, self.frame_rate, self.resolution)
+                        self.stream = cv2.VideoWriter(self.filename, fourcc, self.frame_rate, self.resolution, color)
 
         self.active = True
         logging.info("Stream enabled")
@@ -240,7 +244,7 @@ class VideoServer:
                 bottom = top + crop_h
                 frame  = frame[top : bottom, left : right]
             logging.debug(f"Frame cropped from ({frame_w}, {frame_h}) to ({frame.shape[1]}, {frame.shape[0]})")
-        
+
         logging.debug(f"Resize frame from ({frame.shape[1]}, {frame.shape[0]}) to ({resolution[0]}, {resolution[1]})")
         try:
             frame = cv2.resize(frame, resolution)
@@ -338,21 +342,23 @@ class VideoServer:
             return
 
         try:
+            nBytes = 3
             decoded_frame = np.frombuffer(frame, dtype=np.uint8)
-            decoded_frame = decoded_frame.reshape((self.resolution[0], self.resolution[1], 3))
-            bgr_frame = self.__changeColorSpace(decoded_frame, self.RGB888)
+            if self.color_format == self.GRAYSCALE8:
+                nBytes = 1
+            decoded_frame = decoded_frame.reshape((self.resolution[0], self.resolution[1], nBytes))
 
             if self.filename == "":
-                cv2.imshow(self.filename, bgr_frame)
+                cv2.imshow(self.filename, decoded_frame)
                 cv2.waitKey(10)
             else:
                 if self.video:
-                    self.stream.write(np.uint8(bgr_frame))
+                    self.stream.write(np.uint8(decoded_frame))
                     self.frame_index += 1
                 else:
-                    cv2.imwrite(self.filename, bgr_frame)
-        except Exception:
-            pass
+                    cv2.imwrite(self.filename, decoded_frame)
+        except Exception as e:
+            logging.error(f"Exception in _writeFrame: {e}")
 
     # Run Video Server
     def run(self):
